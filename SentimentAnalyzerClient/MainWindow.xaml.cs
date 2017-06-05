@@ -38,7 +38,6 @@ namespace SentimentAnalyzerClient
         private Dictionary<string, Brush> _colors = new Dictionary<string, Brush>();
         private Dictionary<string, string> _models = new Dictionary<string, string>();
         private static string SERVER_URL = "https://senti-api-server.herokuapp.com";
-        private static string BRUTE_MODEL_PART = "/api/models/brute/text-sentiment";
         private static string GET_AVAILABLE_MODELS_PART = "/api/models";
 
         public MainWindow()
@@ -47,8 +46,10 @@ namespace SentimentAnalyzerClient
             _LoadAvailableModels();
 
             _colors.Add("negative", Brushes.Red);
+            _colors.Add("negative-text", Brushes.LightCoral);
             _colors.Add("neutral", Brushes.Gold);
             _colors.Add("positive", Brushes.ForestGreen);
+            _colors.Add("positive-text", Brushes.LightGreen);
         }
 
         private void _LoadAvailableModels()
@@ -74,8 +75,11 @@ namespace SentimentAnalyzerClient
 
         private void btnAnalyze_Click(object sender, RoutedEventArgs e)
         {
-            string text = new TextRange(rtbAnalyzerText.Document.ContentStart, rtbAnalyzerText.Document.ContentEnd).Text;
-            text = text.Trim();
+            var range = new TextRange(rtbAnalyzerText.Document.ContentStart,
+                rtbAnalyzerText.Document.ContentEnd);
+            range.ApplyPropertyValue(TextElement.BackgroundProperty, null);
+
+            string text = range.Text.Trim();
             string url = SERVER_URL + _models[cbModels.SelectedValue.ToString()];
             var request = (HttpWebRequest)WebRequest.Create(url);
             request.Method = "POST";
@@ -100,7 +104,23 @@ namespace SentimentAnalyzerClient
                     foreach (var info in infos)
                     {
                         sentimentSum += info.Sentiment;
+                        int tokenSentiment = (int)(info.Sentiment * 100);
+                        if (tokenSentiment < 40 || tokenSentiment > 60)
+                        {
+                            TextRange whole = new TextRange(rtbAnalyzerText.Document.ContentStart,
+                                rtbAnalyzerText.Document.ContentEnd);
+                            TextRange colored = _FindTextInRange(whole, info.Token);
+                            if (tokenSentiment < 40)
+                            {
+                                colored.ApplyPropertyValue(TextElement.BackgroundProperty, _colors["negative-text"]);
+                            }
+                            else
+                            {
+                                colored.ApplyPropertyValue(TextElement.BackgroundProperty, _colors["positive-text"]);
+                            }
+                        }
                     }
+
                     int resultSentiment = (int)(sentimentSum / infos.Count * 100);
                     pbTextSentiment.Value = resultSentiment;
                     Brush brush = _colors["neutral"];
@@ -115,6 +135,60 @@ namespace SentimentAnalyzerClient
                     pbTextSentiment.Foreground = brush;
                 }
             }
+        }
+
+        /// <summary>
+        /// 
+        /// Taken from StackOverflow (https://stackoverflow.com/questions/22229741/wpf-richtextbox-application-find-text-spanning-multiple-runs)
+        /// because it's 4 hours before ddl. Huge "thank you" for that guy
+        /// 
+        /// </summary>
+        /// <param name="range"></param>
+        /// <param name="searchText"></param>
+        /// <returns></returns>
+        private TextRange _FindTextInRange(TextRange range, string searchText)
+        {
+            int offset = range.Text.IndexOf(searchText, StringComparison.OrdinalIgnoreCase);
+            if (offset < 0)
+                return null;  // Not found
+
+            var start = _GetTextPositionAtOffset(range.Start, offset);
+            TextRange result = new TextRange(start, _GetTextPositionAtOffset(start, searchText.Length));
+
+            return result;
+        }
+
+        /// <summary>
+        /// 
+        /// This method too
+        /// 
+        /// </summary>
+        /// <param name="position"></param>
+        /// <param name="characterCount"></param>
+        /// <returns></returns>
+        private TextPointer _GetTextPositionAtOffset(TextPointer position, int characterCount)
+        {
+            while (position != null)
+            {
+                if (position.GetPointerContext(LogicalDirection.Forward) == TextPointerContext.Text)
+                {
+                    int count = position.GetTextRunLength(LogicalDirection.Forward);
+                    if (characterCount <= count)
+                    {
+                        return position.GetPositionAtOffset(characterCount);
+                    }
+
+                    characterCount -= count;
+                }
+
+                TextPointer nextContextPosition = position.GetNextContextPosition(LogicalDirection.Forward);
+                if (nextContextPosition == null)
+                    return position;
+
+                position = nextContextPosition;
+            }
+
+            return position;
         }
     }
 }
