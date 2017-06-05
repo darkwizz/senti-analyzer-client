@@ -1,0 +1,25 @@
+﻿<Window x:Class="SentimentAnalyzerClient.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:SentimentAnalyzerClient"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="413.43" Width="525">
+    <Grid>
+        <RichTextBox HorizontalAlignment="Left" Name="rtbAnalyzerText" Height="125" Margin="10,138,0,0" VerticalAlignment="Top" Width="497">
+            <FlowDocument>
+                <Paragraph>
+                    <Run Text=""/>
+                </Paragraph>
+            </FlowDocument>
+        </RichTextBox>
+        <Label Content="Enter text to analyze sentiment" Name="lblAnalyzeEnter" HorizontalAlignment="Left" Margin="10,98,0,0" VerticalAlignment="Top"/>
+        <Button Content="Analyze" Name="btnAnalyze" HorizontalAlignment="Left" Margin="10,268,0,0" VerticalAlignment="Top" Width="75" Click="btnAnalyze_Click"/>
+        <ProgressBar HorizontalAlignment="Left" Name="pbTextSentiment" Height="26" Margin="10,346,0,0" VerticalAlignment="Top" Width="497"/>
+        <Label Content="Text Sentiment:" x:Name="lblSentiment" HorizontalAlignment="Left" Margin="10,307,0,0" VerticalAlignment="Top"/>
+        <Label Content="Choose model to analyze" x:Name="lblChooseModel" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top"/>
+        <ComboBox HorizontalAlignment="Left" Name="cbModels" Margin="10,41,0,0" VerticalAlignment="Top" Width="267"/>
+
+    </Grid>
+</Window>
