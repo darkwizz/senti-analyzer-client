@@ -92,48 +92,62 @@ namespace SentimentAnalyzerClient
                 writer.Flush();
             }
 
-            var response = (HttpWebResponse)request.GetResponse();
+            HttpWebResponse response = null;
+            try
+            {
+                response = (HttpWebResponse)request.GetResponse();
+            }
+            catch (WebException)
+            {
+                MessageBox.Show("No input text");
+            }
+            if (response == null)
+            {
+                return;
+            }
+
+            string result;
+            using (var reader = new StreamReader(response.GetResponseStream()))
+            {
+                result = reader.ReadToEnd();
+            }
             if (response.StatusCode == HttpStatusCode.OK)
             {
-                using (var reader = new StreamReader(response.GetResponseStream()))
-                {
-                    var result = reader.ReadToEnd();
-                    List<WordSentimentInfo> infos = JsonConvert.DeserializeObject<List<WordSentimentInfo>>(result);
+                List<WordSentimentInfo> infos = JsonConvert.DeserializeObject<List<WordSentimentInfo>>(result);
 
-                    double sentimentSum = 0;
-                    foreach (var info in infos)
+                double sentimentSum = 0;
+                foreach (var info in infos)
+                {
+                    sentimentSum += info.Sentiment;
+                    int tokenSentiment = (int)(info.Sentiment * 100);
+                    if (tokenSentiment < 40 || tokenSentiment > 60)
                     {
-                        sentimentSum += info.Sentiment;
-                        int tokenSentiment = (int)(info.Sentiment * 100);
-                        if (tokenSentiment < 40 || tokenSentiment > 60)
+                        TextRange whole = new TextRange(rtbAnalyzerText.Document.ContentStart,
+                            rtbAnalyzerText.Document.ContentEnd);
+                        TextRange colored = _FindTextInRange(whole, info.Token);
+                        if (tokenSentiment < 40)
                         {
-                            TextRange whole = new TextRange(rtbAnalyzerText.Document.ContentStart,
-                                rtbAnalyzerText.Document.ContentEnd);
-                            TextRange colored = _FindTextInRange(whole, info.Token);
-                            if (tokenSentiment < 40)
-                            {
-                                colored.ApplyPropertyValue(TextElement.BackgroundProperty, _colors["negative-text"]);
-                            }
-                            else
-                            {
-                                colored.ApplyPropertyValue(TextElement.BackgroundProperty, _colors["positive-text"]);
-                            }
+                            colored.ApplyPropertyValue(TextElement.BackgroundProperty, _colors["negative-text"]);
+                        }
+                        else
+                        {
+                            colored.ApplyPropertyValue(TextElement.BackgroundProperty, _colors["positive-text"]);
                         }
                     }
-
-                    int resultSentiment = (int)(sentimentSum / infos.Count * 100);
-                    pbTextSentiment.Value = resultSentiment;
-                    Brush brush = _colors["neutral"];
-                    if (resultSentiment < 40)
-                    {
-                        brush = _colors["negative"];
-                    }
-                    else if (resultSentiment > 60)
-                    {
-                        brush = _colors["positive"];
-                    }
-                    pbTextSentiment.Foreground = brush;
                 }
+
+                int resultSentiment = (int)(sentimentSum / infos.Count * 100);
+                pbTextSentiment.Value = resultSentiment;
+                Brush brush = _colors["neutral"];
+                if (resultSentiment < 40)
+                {
+                    brush = _colors["negative"];
+                }
+                else if (resultSentiment > 60)
+                {
+                    brush = _colors["positive"];
+                }
+                pbTextSentiment.Foreground = brush;
             }
         }
 
